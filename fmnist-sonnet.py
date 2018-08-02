@@ -3,6 +3,8 @@ import numpy as np
 import sonnet as snt
 import tensorflow as tf
 
+import time  # To time each epoch
+
 # Needed to download Fashion-MNIST (FMNIST) dataset without much hassle.
 from tensorflow.keras import datasets
 
@@ -136,10 +138,17 @@ def train(model_name, batch_size=1000, epoch=5):
     sgd_step = optimizer.minimize(loss_op)  # Gradient descent step
 
     # Evaluate test accuracy every epochs
-    _, acc_op = tf.metrics.accuracy(
+    acc_op, acc_update_op = tf.metrics.accuracy(
         labels=next_batch_labels_op,
-        predictions=tf.argmax(prediction_op, 1)
+        predictions=tf.argmax(prediction_op, 1),
+        name='accuracy_metric'
     )
+
+    # Get initializer for accuracy vars to reset them after each epoch.
+    accuracy_running_vars = tf.get_collection(
+        tf.GraphKeys.LOCAL_VARIABLES, scope="accuracy_metric")
+    accuracy_vars_initializer = tf.variables_initializer(
+        var_list=accuracy_running_vars)
 
     train_feed_dict = {train_images_op: train_images,
                        train_labels_op: train_labels, batch_size_op: batch_size}
@@ -149,34 +158,35 @@ def train(model_name, batch_size=1000, epoch=5):
     test_feed_dict = {test_images_op: test_images,
                       test_labels_op: test_labels,
                       batch_size_op: len(test_labels)}
-    import time
     with tf.Session() as sess:
         sess.run(tf.local_variables_initializer())
         sess.run(tf.global_variables_initializer())
         for idx in range(epoch):
-
             start = time.time()
+            sess.run(accuracy_vars_initializer)
             sess.run(training_init_op, feed_dict=train_feed_dict)
             while True:
                 try:
-                    sess.run(sgd_step, feed_dict=train_feed_dict)
+                    sess.run([sgd_step, acc_update_op],
+                             feed_dict=train_feed_dict)
                 except tf.errors.OutOfRangeError:
                     break
             train_time = time.time()-start
 
-            sess.run(training_init_op, feed_dict=train_eval_feed_dict)
             print("Epoch {:d} ::: Training Time: {:.2f}s,".format(
                 idx+1, train_time), end=' ')
+
+            sess.run(training_init_op, feed_dict=train_eval_feed_dict)
             print("Training Loss: {:.5f},".format(
                 sess.run(loss_op, feed_dict=train_eval_feed_dict)), end=' ')
 
-            sess.run(training_init_op, feed_dict=train_eval_feed_dict)
             print("Training Accuracy: {:.5f},".format(
-                sess.run(acc_op, feed_dict=train_eval_feed_dict)), end=' ')
+                sess.run(acc_op)), end=' ')
 
+            sess.run(accuracy_vars_initializer)
             sess.run(testing_init_op, feed_dict=test_feed_dict)
-            print("Test Accuracy: {:.5f}".format(
-                sess.run(acc_op, feed_dict=test_feed_dict)))
+            sess.run(acc_update_op, feed_dict=test_feed_dict)
+            print("Test Accuracy: {:.5f}".format(sess.run(acc_op)))
 
 
 train('mlp', batch_size=200, epoch=10)
