@@ -19,16 +19,15 @@ def get_fashion_MNIST_data():
 
     return train_data, test_data
 
+
 # Step 2: Preprocess Dataset
-
-
 def normalize_fmnist_images(images):
     """ Perform max-min normalization of images in FMNIST. """
 
     return images / 255.0
 
 
-# Step 3: Create the model
+# Step 3: Build the model
 
 # Multi-Layer Perceptron
 class FMNISTMLPClassifier(snt.AbstractModule):
@@ -50,6 +49,7 @@ class FMNISTMLPClassifier(snt.AbstractModule):
         return outputs
 
 
+# Convolutional Neural Network
 class FMNISTConvClassifier(snt.AbstractModule):
     def __init__(self, name='fmnist_conv_classifier'):
         super().__init__(name=name)
@@ -61,10 +61,10 @@ class FMNISTConvClassifier(snt.AbstractModule):
             kernel_shapes=[5, 5],
             strides=[2, 2],
             paddings=[snt.SAME],
-            activate_final=True,
             name='convolutional_module'
         )(inputs)
         outputs = snt.BatchFlatten()(outputs)
+        outputs = tf.nn.relu(outputs)
         outputs = snt.nets.MLP(
             output_sizes=[64, 10],
             name='fully_connected_module'
@@ -162,8 +162,8 @@ def train(model_name, batch_size=1000, epoch=5):
                     sess.run(sgd_step, feed_dict=train_feed_dict)
                 except tf.errors.OutOfRangeError:
                     break
-
             train_time = time.time()-start
+
             sess.run(training_init_op, feed_dict=train_eval_feed_dict)
             print("Epoch {:d} ::: Training Time: {:.2f}s,".format(
                 idx+1, train_time), end=' ')
