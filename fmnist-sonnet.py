@@ -70,7 +70,7 @@ class FMNISTMLPClassifier(snt.AbstractModule):
 
 # Convolutional Neural Network
 class FMNISTConvClassifier(snt.AbstractModule):
-    """ Model for Classifying FMNIST dataset based on a Multi-Layer Perceptron """
+    """ Model for Classifying FMNIST dataset based on a Convolutional Neural Network """
 
     def __init__(self, name='fmnist_conv_classifier'):
         """ Initialize the conv net based classifier.
@@ -204,11 +204,11 @@ def train(model_name, batch_size=1000, epoch=5):
     optimizer = tf.train.AdamOptimizer()  # Optimizer Op
     sgd_step = optimizer.minimize(loss_op)  # Gradient Descent step Op.
 
-    """ Op to evaluate training and test accuracy every epochs. 
-        `tf.metrics.accuracy` returns two ops, `acc_op` which simple perform a 
-        calculation to give the current accuracy, and `acc_update_op` which 
-        actually perform the evaluation and keeps tracks of the counts needed 
-        to evaluate accuracy.
+    """ Op to evaluate training and test accuracy every epoch. 
+        `tf.metrics.accuracy` returns two ops: `acc_op` and `acc_update_op`. 
+        `acc_op` performs the calculation to give the current accuracy based on 
+        the current counts. `acc_update_op` performs the evaluations and updates 
+        the counts needed to calculate accuracy.
     """
     acc_op, acc_update_op = tf.metrics.accuracy(
         labels=next_batch_labels_op,
@@ -288,4 +288,5 @@ def train(model_name, batch_size=1000, epoch=5):
             print("Test Accuracy: {:.5f}".format(sess.run(acc_op)))
 
 
+# Train the MLP with mini-batch size 200 for 10 epochs.
 train('mlp', batch_size=200, epoch=10)
